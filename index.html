@@ -123,31 +123,56 @@ const QUIZ_DATA = [{"id": 0, "word": "会得", "yomi": "えとく", "mean": "物
   "use strict";
 
   // ---------- 永続ストレージ（要件④⑤） ----------
-  // window.storage が使える環境では永続化。無ければメモリのみ（セッション内）。
-  const HAS_STORE = (typeof window !== "undefined" && window.storage && typeof window.storage.get === "function");
+  // 通常のブラウザでは localStorage に保存（リロード・再起動後も残る）。
+  // localStorage が使えない特殊環境では window.storage を使う。
   const KEY = "spi_kotoba_state_v1";
   let state = { history:{}, starred:{} }; // history: id -> [{t,correct}], starred: id -> true
   let saveTimer = null;
 
+  // localStorage が実際に使えるか判定
+  let HAS_LS = false;
+  try{
+    const t = "__spi_test__";
+    window.localStorage.setItem(t, "1");
+    window.localStorage.removeItem(t);
+    HAS_LS = true;
+  }catch(e){ HAS_LS = false; }
+  const HAS_STORE = (!HAS_LS && typeof window !== "undefined" && window.storage && typeof window.storage.get === "function");
+
   async function loadState(){
-    if(!HAS_STORE) return;
     try{
-      const r = await window.storage.get(KEY, false);
-      if(r && r.value){
-        const p = JSON.parse(r.value);
-        if(p && typeof p === "object"){
-          state.history = p.history || {};
-          state.starred = p.starred || {};
+      if(HAS_LS){
+        const raw = window.localStorage.getItem(KEY);
+        if(raw){
+          const p = JSON.parse(raw);
+          if(p && typeof p === "object"){
+            state.history = p.history || {};
+            state.starred = p.starred || {};
+          }
+        }
+      }else if(HAS_STORE){
+        const r = await window.storage.get(KEY, false);
+        if(r && r.value){
+          const p = JSON.parse(r.value);
+          if(p && typeof p === "object"){
+            state.history = p.history || {};
+            state.starred = p.starred || {};
+          }
         }
       }
-    }catch(e){ /* 初回はキー無しで例外 → 無視 */ }
+    }catch(e){ /* 初回はデータ無し → 無視 */ }
   }
   function saveState(){
-    if(!HAS_STORE) return;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(async ()=>{
-      try{ await window.storage.set(KEY, JSON.stringify(state), false); }
-      catch(e){ console.error("save failed", e); }
+      try{
+        const payload = JSON.stringify(state);
+        if(HAS_LS){
+          window.localStorage.setItem(KEY, payload);
+        }else if(HAS_STORE){
+          await window.storage.set(KEY, payload, false);
+        }
+      }catch(e){ console.error("save failed", e); }
     }, 250);
   }
 
