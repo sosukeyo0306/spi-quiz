@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPI言語 単語クイズ</title>
+<style>
+  :root{
+    --bg:#f4f6f9; --card:#ffffff; --ink:#1f2937; --sub:#6b7280;
+    --line:#e5e7eb; --blue:#4f86d6; --blue-d:#3f6fb5; --blue-l:#eef4fc;
+    --green:#1f9d62; --green-l:#e7f6ee; --red:#d64f5a; --red-l:#fbeced;
+    --amber:#d99a2b; --amber-l:#fdf3e2; --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+    line-height:1.6;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:760px;margin:0 auto;padding:16px 16px 64px;}
+  header.bar{position:sticky;top:0;z-index:20;background:rgba(244,246,249,.9);
+    backdrop-filter:blur(8px);padding:10px 0;margin-bottom:8px;}
+  .bar-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .logo{font-weight:700;font-size:18px;letter-spacing:.02em;}
+  .logo small{font-weight:500;color:var(--sub);font-size:12px;margin-left:6px;}
+  .spacer{flex:1;}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+  .tab{border:1px solid var(--line);background:var(--card);color:var(--sub);
+    padding:7px 13px;border-radius:999px;font-size:13px;cursor:pointer;transition:.15s;
+    display:inline-flex;align-items:center;gap:6px;}
+  .tab:hover{border-color:var(--blue);color:var(--blue);}
+  .tab.active{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .tab .cnt{background:rgba(0,0,0,.08);border-radius:999px;padding:0 7px;font-size:11px;font-weight:600;}
+  .tab.active .cnt{background:rgba(255,255,255,.25);}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    box-shadow:var(--shadow);padding:20px;margin-bottom:14px;}
+  .label{display:inline-block;border-left:4px solid var(--blue);padding-left:10px;
+    font-weight:700;font-size:17px;margin-bottom:14px;}
+  .qtext{font-size:18px;font-weight:500;border-bottom:1px solid var(--line);
+    padding-bottom:14px;margin-bottom:4px;text-decoration:underline;text-underline-offset:5px;
+    text-decoration-color:#c9d4e5;}
+  .meta{display:flex;justify-content:space-between;align-items:center;color:var(--sub);
+    font-size:12px;margin-bottom:8px;}
+  .opt{display:flex;align-items:center;gap:12px;border:1px solid var(--line);
+    background:var(--card);border-radius:10px;padding:14px 16px;margin:9px 0;cursor:pointer;
+    transition:.12s;font-size:16px;}
+  .opt:hover{border-color:var(--blue);background:var(--blue-l);}
+  .opt .key{width:24px;height:24px;border-radius:6px;background:#f0f2f6;color:var(--sub);
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;}
+  .opt.correct{border-color:var(--green);background:var(--green-l);}
+  .opt.correct .key{background:var(--green);color:#fff;}
+  .opt.wrong{border-color:var(--red);background:var(--red-l);}
+  .opt.wrong .key{background:var(--red);color:#fff;}
+  .opt.disabled{cursor:default;}
+  .opt.dim{opacity:.55;}
+  .feedback{margin-top:14px;padding:14px 16px;border-radius:10px;font-size:15px;}
+  .feedback.ok{background:var(--green-l);color:#0f5132;}
+  .feedback.ng{background:var(--red-l);color:#842029;}
+  .feedback .ans{font-weight:700;}
+  .feedback .yomi{color:var(--sub);font-size:13px;margin-left:6px;}
+  .btn{border:none;border-radius:10px;padding:13px 18px;font-size:15px;font-weight:600;
+    cursor:pointer;transition:.15s;font-family:inherit;}
+  .btn-primary{background:var(--blue);color:#fff;width:100%;}
+  .btn-primary:hover{background:var(--blue-d);}
+  .btn-ghost{background:var(--card);border:1px solid var(--line);color:var(--ink);}
+  .btn-ghost:hover{border-color:var(--blue);color:var(--blue);}
+  .row{display:flex;gap:10px;margin-top:14px;}
+  .row .btn{flex:1;}
+  .star{margin-left:auto;background:none;border:none;cursor:pointer;font-size:22px;
+    line-height:1;color:#d1d5db;transition:.15s;padding:0 2px;}
+  .star.on{color:var(--amber);}
+  .star:hover{transform:scale(1.15);}
+  .progress{height:6px;background:var(--line);border-radius:999px;overflow:hidden;margin-bottom:14px;}
+  .progress > i{display:block;height:100%;background:var(--blue);transition:width .3s;}
+  .empty{text-align:center;color:var(--sub);padding:48px 16px;}
+  .empty .big{font-size:42px;margin-bottom:8px;}
+  .list-item{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1px solid var(--line);}
+  .list-item:last-child{border-bottom:none;}
+  .li-main{flex:1;min-width:0;}
+  .li-word{font-weight:700;font-size:16px;}
+  .li-word .y{color:var(--sub);font-weight:400;font-size:12px;margin-left:8px;}
+  .li-mean{color:var(--sub);font-size:13px;margin-top:2px;}
+  .li-hist{display:flex;gap:3px;margin-top:7px;flex-wrap:wrap;}
+  .dot{width:9px;height:9px;border-radius:50%;}
+  .dot.o{background:var(--green);} .dot.x{background:var(--red);}
+  .badge{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600;white-space:nowrap;}
+  .badge.ng{background:var(--red-l);color:var(--red);}
+  .badge.ok{background:var(--green-l);color:var(--green);}
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center;}
+  .stat .n{font-size:24px;font-weight:700;}
+  .stat .t{font-size:12px;color:var(--sub);margin-top:2px;}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+  .toolbar .spacer{flex:1;}
+  .mini{font-size:13px;color:var(--sub);}
+  .link{color:var(--blue);cursor:pointer;font-size:13px;text-decoration:underline;background:none;border:none;}
+  .done-card{text-align:center;}
+  .done-card .big{font-size:46px;margin-bottom:6px;}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
+    background:#1f2937;color:#fff;padding:11px 18px;border-radius:10px;font-size:14px;
+    opacity:0;pointer-events:none;transition:.25s;z-index:50;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  kbd{background:#f0f2f6;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;
+    padding:1px 6px;font-size:11px;color:var(--sub);font-family:inherit;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="bar">
+    <div class="bar-row">
+      <span class="logo">SPI言語 単語クイズ<small id="totalLbl"></small></span>
+      <span class="spacer"></span>
+    </div>
+    <nav class="tabs" id="tabs"></nav>
+  </header>
+  <main id="view"></main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const QUIZ_DATA = [{"id": 0, "word": "会得", "yomi": "えとく", "mean": "物事の意味、本質などを理解し、悟る", "dummies": ["理解", "把握", "体得", "領会"]}, {"id": 1, "word": "公算", "yomi": "こうさん", "mean": "あることが起こる見込み", "dummies": ["確率", "可能性", "見込", "勝算"]}, {"id": 2, "word": "再三", "yomi": "さいさん", "mean": "度々、何度も", "dummies": ["度々", "頻繁", "頻回", "幾度"]}, {"id": 3, "word": "励行", "yomi": "れいこう", "mean": "努力して実行すること", "dummies": ["実行", "履行", "遂行", "実践"]}, {"id": 4, "word": "専横", "yomi": "せんおう", "mean": "ワガママな振る舞い", "dummies": ["独断", "専制", "独裁", "横暴"]}, {"id": 5, "word": "尊大", "yomi": "そんだい", "mean": "人を見下したような偉そうな態度をとる", "dummies": ["傲慢", "不遜", "横柄", "傲岸"]}, {"id": 6, "word": "感服", "yomi": "かんぷく", "mean": "深く感心して尊敬の気持ちを抱くこと", "dummies": ["敬服", "感嘆", "感銘", "敬意"]}, {"id": 7, "word": "憐憫", "yomi": "れんびん", "mean": "不憫に思うこと。哀れみの気持ち。", "dummies": ["同情", "不憫", "哀憐", "哀惜"]}, {"id": 8, "word": "折半", "yomi": "せっぱん", "mean": "二等分すること", "dummies": ["等分", "二分", "半額", "等割"]}, {"id": 9, "word": "折衷", "yomi": "せっちゅう", "mean": "それぞれにいいところがあって一つに合わせること", "dummies": ["調和", "融合", "妥協", "混合"]}, {"id": 10, "word": "斯界", "yomi": "しかい", "mean": "この分野", "dummies": ["業界", "専門", "同業", "界隈"]}, {"id": 11, "word": "早晩", "yomi": "そうばん", "mean": "遅かれ早かれ", "dummies": ["遅速", "終局", "結末", "早急"]}, {"id": 12, "word": "更迭", "yomi": "こうてつ", "mean": "職や地位についている人を替える", "dummies": ["罷免", "解任", "交代", "左遷"]}, {"id": 13, "word": "泰然", "yomi": "たいぜん", "mean": "落ち着いていて物事に動じない様子", "dummies": ["悠然", "平然", "毅然", "従容"]}, {"id": 14, "word": "流布", "yomi": "るふ", "mean": "世間に広まること", "dummies": ["蔓延", "普及", "伝播", "散布"]}, {"id": 15, "word": "消長", "yomi": "しょうちょう", "mean": "物事が衰え消えるか伸びて盛んになる", "dummies": ["盛衰", "浮沈", "起伏", "栄枯"]}, {"id": 16, "word": "狼狽", "yomi": "ろうばい", "mean": "慌てふためくこと", "dummies": ["混乱", "動揺", "恐慌", "当惑"]}, {"id": 17, "word": "老成", "yomi": "ろうせい", "mean": "経験を積んで熟達すること。", "dummies": ["円熟", "熟達", "達観", "成熟"]}, {"id": 18, "word": "至言", "yomi": "しげん", "mean": "いかにも正しいところを言い当てた言葉", "dummies": ["名言", "格言", "箴言", "金言"]}, {"id": 19, "word": "見識", "yomi": "けんしき", "mean": "物事を正しく判断する", "dummies": ["卓見", "洞察", "眼力", "識見"]}, {"id": 20, "word": "言質", "yomi": "げんち", "mean": "あとで証拠となる約束の言葉", "dummies": ["確約", "証拠", "約束", "担保"]}, {"id": 21, "word": "識見", "yomi": "しきけん", "mean": "物事に正しい判断を下す力、優れた意見", "dummies": ["見識", "卓見", "見解", "洞察"]}, {"id": 22, "word": "趨勢", "yomi": "すうせい", "mean": "ある方向へと動く勢い。社会の全体の流れ", "dummies": ["動向", "潮流", "大勢", "傾向"]}, {"id": 23, "word": "迎合", "yomi": "げいごう", "mean": "自分の考えを曲げても、他人の意に従って気にいられるようにすること", "dummies": ["阿諛", "追従", "忖度", "妥協"]}, {"id": 24, "word": "造詣", "yomi": "ぞうけい", "mean": "どの分野に関しての知識や優れた技量", "dummies": ["学識", "蘊蓄", "見識", "知識"]}, {"id": 25, "word": "逡巡", "yomi": "しゅんじゅん", "mean": "決断できずにぐずぐずすること。", "dummies": ["躊躇", "遅疑", "猶予", "停滞"]}, {"id": 26, "word": "進言", "yomi": "しんげん", "mean": "上の者に意見を申し述べる", "dummies": ["提言", "忠告", "建白", "献言"]}, {"id": 27, "word": "あげつらう", "yomi": "", "mean": "物事のよしあしについて論じ合う、欠点をことさらに言い立てる", "dummies": ["非難", "批判", "酷評", "論難"]}, {"id": 28, "word": "あまつさえ", "yomi": "", "mean": "それどころではなく", "dummies": ["加えて", "さらに", "おまけに", "その上"]}, {"id": 29, "word": "いみじくも", "yomi": "", "mean": "適切に。巧みにも", "dummies": ["適切に", "見事に", "巧みに", "的確に"]}, {"id": 30, "word": "おしなべて", "yomi": "", "mean": "全て一様に", "dummies": ["概して", "総じて", "一様に", "一般に"]}, {"id": 31, "word": "おずおず", "yomi": "", "mean": "おそれためらいながら行動するさま。おそるおそる", "dummies": ["恐る恐る", "びくびく", "こわごわ", "おどおど"]}, {"id": 32, "word": "かいがいしい", "yomi": "", "mean": "動作がきびきびしていて、手ぎわがよいこと", "dummies": ["勤勉な", "献身的な", "まめまめしい", "きびきび"]}, {"id": 33, "word": "ことほぐ", "yomi": "", "mean": "言葉で祝福する", "dummies": ["祝福する", "祝う", "賀する", "祝言"]}, {"id": 34, "word": "すいたらしい", "yomi": "", "mean": "なんとなく好ましい、感じが良いこと", "dummies": ["魅力的な", "愛らしい", "愛想の良い", "好感"]}, {"id": 35, "word": "ぞんざい", "yomi": "", "mean": "物事をいい加減にすること。投げやりなさま", "dummies": ["粗雑", "粗悪", "いい加減", "投げやり"]}, {"id": 36, "word": "たゆたう", "yomi": "", "mean": "ゆらゆらと揺れ動いて定まらない", "dummies": ["漂う", "揺れる", "彷徨う", "定まらない"]}, {"id": 37, "word": "つぶさに", "yomi": "", "mean": "細かく", "dummies": ["詳細に", "丹念に", "克明に", "網羅的に"]}, {"id": 38, "word": "不憫", "yomi": "ふびん", "mean": "かわいそうで哀れむべきこと。", "dummies": ["哀れ", "可哀想", "気の毒", "憐憫"]}, {"id": 39, "word": "不懈", "yomi": "ふかい", "mean": "怠らず努力すること", "dummies": ["勤勉", "不屈", "弛まず", "怠らず"]}, {"id": 40, "word": "予見", "yomi": "よけん", "mean": "事が起こる前にあらかじめ知ること。", "dummies": ["予測", "予知", "予想", "先見"]}, {"id": 41, "word": "付合", "yomi": "ふごう", "mean": "完全に一致すること", "dummies": ["整合", "合致", "一致", "適合"]}, {"id": 42, "word": "伍する", "yomi": "ごする", "mean": "他者と同等の位置にある。かたをならべる", "dummies": ["匹敵", "比肩", "伯仲", "拮抗"]}, {"id": 43, "word": "伝播", "yomi": "でんぱ", "mean": "広く伝わること", "dummies": ["普及", "波及", "伝染", "拡散"]}, {"id": 44, "word": "佳境", "yomi": "かきょう", "mean": "興味深い場面。おもしろい所", "dummies": ["山場", "絶頂", "最高潮", "見せ場"]}, {"id": 45, "word": "傀儡", "yomi": "かいらい", "mean": "操り人形。人の手先で使われる", "dummies": ["手先", "操り人形", "ロボット", "隠れ蓑"]}, {"id": 46, "word": "公明正大", "yomi": "こうめいせいだい", "mean": "心がはっきり、大きく正しいこと", "dummies": ["清廉潔白", "品行方正", "明白", "公正"]}, {"id": 47, "word": "凱旋", "yomi": "がいせん", "mean": "戦いに勝って意気揚々と帰ること", "dummies": ["帰還", "帰陣", "勝利", "帰郷"]}, {"id": 48, "word": "出色", "yomi": "しゅっしょく", "mean": "他より特に優れていること。", "dummies": ["傑出", "卓越", "抜群", "優秀"]}, {"id": 49, "word": "刻銘", "yomi": "こくめい", "mean": "石碑などに刻まれた文字", "dummies": ["銘記", "刻印", "記憶", "彫刻"]}, {"id": 50, "word": "卑近", "yomi": "ひきん", "mean": "手近でたやすいこと。身近でありふれていること", "dummies": ["通俗", "身近", "平凡", "ありふれた"]}, {"id": 51, "word": "参画", "yomi": "さんかく", "mean": "企てや事業の計画に加わる", "dummies": ["関与", "参加", "介入", "加担"]}, {"id": 52, "word": "反目", "yomi": "はんもく", "mean": "仲が悪く、対立すること。にらみあいの状態にあること", "dummies": ["対立", "不和", "敵対", "衝突"]}, {"id": 53, "word": "吐露", "yomi": "とろ", "mean": "心の中を包み隠さずに打ち明けること", "dummies": ["告白", "開陳", "表明", "述懐"]}, {"id": 54, "word": "吹聴", "yomi": "ふいちょう", "mean": "言いふらすこと", "dummies": ["流布", "宣伝", "誇張", "公言"]}, {"id": 55, "word": "呵責", "yomi": "かしゃく", "mean": "厳しくとがめて叱ること。叱り責める", "dummies": ["叱責", "譴責", "非難", "咎め"]}, {"id": 56, "word": "咀嚼", "yomi": "そしゃく", "mean": "内容をよく考え、十分に理解し味わうこと。", "dummies": ["吟味", "消化", "理解", "熟考"]}, {"id": 57, "word": "咄嗟", "yomi": "とっさ", "mean": "瞬間的な判断や行動", "dummies": ["瞬間", "即座", "刹那", "瞬時"]}, {"id": 58, "word": "営々", "yomi": "えいえい", "mean": "せっせと一生懸命に働くさま", "dummies": ["孜々", "せっせと", "勤勉", "黙々"]}, {"id": 59, "word": "嗚咽", "yomi": "おえつ", "mean": "声を押し殺して泣くこと", "dummies": ["号泣", "痛哭", "悲鳴", "啜り泣き"]}, {"id": 60, "word": "困憊", "yomi": "こんぱい", "mean": "苦しいこと続きに疲れ果てる", "dummies": ["疲労", "疲弊", "衰弱", "消耗"]}, {"id": 61, "word": "在野", "yomi": "ざいや", "mean": "民間の人", "dummies": ["民間", "非主流", "草の根", "市井"]}, {"id": 62, "word": "垂涎", "yomi": "すいぜん", "mean": "あるものを手に入れたいと熱望する", "dummies": ["熱望", "渇望", "切望", "憧憬"]}, {"id": 63, "word": "変節", "yomi": "へんせつ", "mean": "それまでの主義や信念を変えること。", "dummies": ["転向", "豹変", "裏切り", "背信"]}, {"id": 64, "word": "大仰", "yomi": "たいぎょう", "mean": "大げさなこと", "dummies": ["誇張", "大げさ", "仰々しい", "針小棒大"]}, {"id": 65, "word": "奔流", "yomi": "ほんりゅう", "mean": "勢いの激しい流れ", "dummies": ["濁流", "激流", "急流", "奔波"]}, {"id": 66, "word": "如実", "yomi": "にょじつ", "mean": "実際の通り", "dummies": ["忠実", "明白", "克明", "ありのまま"]}, {"id": 67, "word": "委細", "yomi": "いさい", "mean": "詳しいこと", "dummies": ["詳細", "てんまつ", "事情", "一部始終"]}, {"id": 68, "word": "宦官", "yomi": "かんがん", "mean": "古代中国で、去勢され宮中で働いた官吏", "dummies": ["内臣", "侍従", "従者", "官吏"]}, {"id": 69, "word": "寡聞", "yomi": "かぶん", "mean": "知識や経験が少ないこと", "dummies": ["浅学", "無知", "不勉強", "見識不足"]}, {"id": 70, "word": "押し並べて", "yomi": "おしなべて", "mean": "全体にわたって。全て一様に", "dummies": ["総じて", "概して", "一様に", "一般に"]}, {"id": 71, "word": "担勇", "yomi": "たんゆう", "mean": "ものに動じない勇気があること", "dummies": ["剛勇", "勇敢", "大胆", "勇猛"]}, {"id": 72, "word": "拝眉", "yomi": "はいび", "mean": "人に会うこと", "dummies": ["面会", "対面", "謁見", "引見"]}, {"id": 73, "word": "拮抗", "yomi": "きっこう", "mean": "力が等しく張り合うこと", "dummies": ["伯仲", "匹敵", "対抗", "競合"]}, {"id": 74, "word": "擬態", "yomi": "ぎたい", "mean": "他のものに似せた形をとること", "dummies": ["偽装", "模倣", "変装", "カモフラージュ"]}, {"id": 75, "word": "擱筆", "yomi": "かくひつ", "mean": "書くのをやめること", "dummies": ["絶筆", "休筆", "執筆終了", "断筆"]}, {"id": 76, "word": "敢行", "yomi": "かんこう", "mean": "困難を押し切って実行すること", "dummies": ["決行", "強行", "実行", "遂行"]}, {"id": 77, "word": "敷衍", "yomi": "ふえい", "mean": "例を挙げて詳しく説明すること", "dummies": ["詳述", "解説", "展開", "拡大"]}, {"id": 78, "word": "斟酌", "yomi": "しんしゃく", "mean": "事情を汲み取って手加減すること", "dummies": ["忖度", "考慮", "配慮", "手加減"]}, {"id": 79, "word": "斡旋", "yomi": "あっせん", "mean": "間に入って双方をうまく取りもつこと", "dummies": ["仲介", "調整", "仲裁", "介入"]}, {"id": 80, "word": "断腸", "yomi": "だんちょう", "mean": "腹わたがちぎれるほど、非常に悲しいこと", "dummies": ["悲痛", "痛恨", "愁傷", "悲哀"]}, {"id": 81, "word": "明け透け", "yomi": "あけすけ", "mean": "隠すことなく、包み隠しの無いこと。露骨", "dummies": ["露骨", "率直", "赤裸々", "あからさま"]}, {"id": 82, "word": "明察", "yomi": "めいさつ", "mean": "物事を見抜くこと", "dummies": ["洞察", "推察", "慧眼", "見抜く"]}, {"id": 83, "word": "星霜", "yomi": "せいそう", "mean": "年月", "dummies": ["歳月", "年月", "光陰", "時代"]}, {"id": 84, "word": "暁通", "yomi": "ぎょうつう", "mean": "すみずみまで知り尽くしていること", "dummies": ["熟知", "精通", "通暁", "諳んじる"]}, {"id": 85, "word": "暫時", "yomi": "ざんじ", "mean": "しばらく。", "dummies": ["束の間", "一時", "しばし", "しばらく"]}, {"id": 86, "word": "本懐を遂げる", "yomi": "ほんかいをとげる", "mean": "もともとの夢を達成すること", "dummies": ["宿願達成", "大願成就", "悲願達成", "目的完遂"]}, {"id": 87, "word": "概括", "yomi": "がいかつ", "mean": "大まかにまとめること", "dummies": ["総括", "要約", "大綱", "概論"]}, {"id": 88, "word": "標榜", "yomi": "ひょうぼう", "mean": "主義・主張などを公然に表すこと", "dummies": ["公言", "主張", "掲げる", "アピール"]}, {"id": 89, "word": "機知", "yomi": "きち", "mean": "その場に応じてとっさに働く鋭い知恵", "dummies": ["機転", "頓知", "才覚", "エスプリ"]}, {"id": 90, "word": "殊勝", "yomi": "しゅしょう", "mean": "心がけや行動が感心なさま。けなげ。", "dummies": ["健気", "感心", "素直", "けなげ"]}, {"id": 91, "word": "毅然", "yomi": "きぜん", "mean": "意志や信念をつらぬき、物事に動じないさま", "dummies": ["断固", "決然", "泰然", "確固"]}, {"id": 92, "word": "比肩", "yomi": "ひけん", "mean": "肩を並べること。同等なこと", "dummies": ["匹敵", "伍する", "並ぶ", "伯仲"]}, {"id": 93, "word": "気丈", "yomi": "きじょう", "mean": "心や気持ちがしっかりしていること", "dummies": ["剛胆", "強気", "剛毅", "不屈"]}, {"id": 94, "word": "気鋭", "yomi": "きえい", "mean": "意気込みが鋭い事", "dummies": ["新進", "意気軒昂", "覇気", "意欲的"]}, {"id": 95, "word": "汗顔", "yomi": "かんがん", "mean": "大いに恥じること", "dummies": ["慙愧", "恥辱", "羞恥", "赤面"]}, {"id": 96, "word": "沿革", "yomi": "えんかく", "mean": "物事の移り変わり", "dummies": ["変遷", "歴史", "由来", "成り立ち"]}, {"id": 97, "word": "法外", "yomi": "ほうがい", "mean": "普通の程度を超えていること", "dummies": ["異常", "規格外", "途方もない", "無茶"]}, {"id": 98, "word": "流転", "yomi": "るてん", "mean": "絶えず移り変わること。", "dummies": ["輪廻", "変遷", "浮沈", "移ろい"]}, {"id": 99, "word": "淳朴", "yomi": "じゅんぼく", "mean": "素朴で飾り気がないこと", "dummies": ["純朴", "素朴", "質実", "純真"]}, {"id": 100, "word": "溜飲", "yomi": "りゅういん", "mean": "胸のつかえが下りること", "dummies": ["安堵", "爽快", "解消", "満足"]}, {"id": 101, "word": "漸次", "yomi": "ぜんじ", "mean": "次第に。だんだん", "dummies": ["次第に", "徐々に", "少しずつ", "段階的"]}, {"id": 102, "word": "漸進", "yomi": "ぜんしん", "mean": "順に追ってだんだんに進むこと", "dummies": ["進歩", "徐々に", "一歩ずつ", "段階的"]}, {"id": 103, "word": "潮時", "yomi": "しおどき", "mean": "ちょうどいいタイミング", "dummies": ["好機", "機会", "タイミング", "頃合い"]}, {"id": 104, "word": "焦燥", "yomi": "しょうそう", "mean": "いらだち、焦ること", "dummies": ["焦り", "苛立ち", "歯がゆさ", "気疲れ"]}, {"id": 105, "word": "焦眉", "yomi": "しょうび", "mean": "火が迫るように、危難が迫る", "dummies": ["喫緊", "急務", "切迫", "差し迫った"]}, {"id": 106, "word": "煩瑣", "yomi": "はんさ", "mean": "こまごまとしてわずらわしいこと。", "dummies": ["煩雑", "複雑", "厄介", "面倒"]}, {"id": 107, "word": "猜疑", "yomi": "さいぎ", "mean": "ねたみ疑うこと", "dummies": ["疑念", "疑心", "不信", "嫉妬"]}, {"id": 108, "word": "猶予", "yomi": "ゆうよ", "mean": "実行の期限を伸ばすこと", "dummies": ["延期", "猶予期間", "引き延ばし", "モラトリアム"]}, {"id": 109, "word": "獰悪", "yomi": "どうあく", "mean": "性質が乱暴で荒っぽいこと。凶悪", "dummies": ["凶暴", "凶悪", "残忍", "悪逆"]}, {"id": 110, "word": "現", "yomi": "うつつ", "mean": "この世に現に存在しているもの。現実", "dummies": ["現実", "事実", "実体", "真実"]}, {"id": 111, "word": "瓦解", "yomi": "がかい", "mean": "組織的な物事の一部分が壊れて、それによって全体がこわれること", "dummies": ["崩壊", "破綻", "決壊", "倒壊"]}, {"id": 112, "word": "甘受", "yomi": "かんじゅ", "mean": "甘んじて受けること", "dummies": ["容認", "享受", "受容", "忍従"]}, {"id": 113, "word": "甲斐甲斐しい", "yomi": "かいがいしい", "mean": "動作がきびきびしていて、手ぎわがよいさま", "dummies": ["まめまめしい", "献身的な", "勤勉な", "世話焼き"]}, {"id": 114, "word": "登庸", "yomi": "とうよう", "mean": "人を官職などに登用すること", "dummies": ["抜擢", "採用", "起用", "登用"]}, {"id": 115, "word": "皮算用", "yomi": "かわざんよう", "mean": "計画通りにうまくいくと早合点すること", "dummies": ["早合点", "楽観", "期待", "捕らぬ狸"]}, {"id": 116, "word": "盲信", "yomi": "もうしん", "mean": "何の疑いもなく信じ込むこと", "dummies": ["妄信", "狂信", "鵜呑み", "偏信"]}, {"id": 117, "word": "直言", "yomi": "ちょくげん", "mean": "自分の考えを遠慮せずいうこと", "dummies": ["忠言", "諫言", "明言", "苦言"]}, {"id": 118, "word": "看破", "yomi": "かんぱ", "mean": "見やぶること", "dummies": ["見抜く", "洞察", "喝破", "見破る"]}, {"id": 119, "word": "真正", "yomi": "しんせい", "mean": "真実で正しいこと", "dummies": ["正真正銘", "純粋", "真性", "本格"]}, {"id": 120, "word": "督励", "yomi": "とくれい", "mean": "監督し励ますこと", "dummies": ["激励", "叱咤", "鼓舞", "鞭撻"]}, {"id": 121, "word": "私淑", "yomi": "ししゅく", "mean": "密かにある人を師と考え、模範で学ぶ", "dummies": ["傾倒", "師事", "尊崇", "崇拝"]}, {"id": 122, "word": "符合", "yomi": "ふごう", "mean": "完全に一致すること。", "dummies": ["一致", "合致", "整合", "適合"]}, {"id": 123, "word": "粉飾", "yomi": "ふんしょく", "mean": "実態よりも良く見せること", "dummies": ["偽装", "虚飾", "ごまかし", "装飾"]}, {"id": 124, "word": "精通", "yomi": "せいつう", "mean": "深く知り尽くしていること", "dummies": ["熟知", "暁通", "通暁", "詳しい"]}, {"id": 125, "word": "緘口", "yomi": "かんこう", "mean": "口をつぐみ、話さないこと", "dummies": ["黙秘", "沈黙", "無言", "口封じ"]}, {"id": 126, "word": "罷免", "yomi": "ひめん", "mean": "職を辞めさせること。", "dummies": ["解任", "更迭", "左遷", "免職"]}, {"id": 127, "word": "義憤", "yomi": "ぎふん", "mean": "道にはずれたことに対して発する怒り", "dummies": ["公憤", "憤慨", "激怒", "憤怒"]}, {"id": 128, "word": "耽読", "yomi": "たんどく", "mean": "夢中になって読みふけること", "dummies": ["熱中", "没頭", "熟読", "耽溺"]}, {"id": 129, "word": "肝要", "yomi": "かんよう", "mean": "非常に大事な事。", "dummies": ["必須", "重要", "核心", "不可欠"]}, {"id": 130, "word": "背反", "yomi": "はいはん", "mean": "道理に背くこと", "dummies": ["矛盾", "相反", "違反", "抵触"]}, {"id": 131, "word": "脆弱", "yomi": "ぜいじゃく", "mean": "もろくて弱い", "dummies": ["薄弱", "軟弱", "貧弱", "ひ弱"]}, {"id": 132, "word": "腐心", "yomi": "ふしん", "mean": "心を悩ませながら努力すること", "dummies": ["苦心", "苦慮", "専心", "骨折り"]}, {"id": 133, "word": "英断", "yomi": "えいだん", "mean": "思い切りがよく決すること。優れた決断", "dummies": ["決断", "勇断", "果断", "決心"]}, {"id": 134, "word": "英気", "yomi": "えいき", "mean": "すぐれた才気", "dummies": ["活力", "覇気", "鋭気", "気力"]}, {"id": 135, "word": "英知", "yomi": "えいち", "mean": "深遠な道理を知りうる優れた知恵", "dummies": ["叡智", "知恵", "賢明", "知識"]}, {"id": 136, "word": "落伍", "yomi": "らくご", "mean": "仲間から遅れ、ついていけなくなること", "dummies": ["脱落", "挫折", "劣後", "敗北"]}, {"id": 137, "word": "蘊蓄", "yomi": "うんちく", "mean": "深い知識や学識", "dummies": ["学識", "知識", "造詣", "博識"]}, {"id": 138, "word": "訥弁", "yomi": "とつべん", "mean": "言葉がつかえがちで、すらすら話せないこと", "dummies": ["口下手", "寡黙", "無口", "つっかえる"]}, {"id": 139, "word": "誤見", "yomi": "びゅうけん", "mean": "まちがった考えや見解。", "dummies": ["誤解", "錯覚", "謬見", "曲解"]}, {"id": 140, "word": "諳う", "yomi": "あげつらう", "mean": "物事のよしあしについて論じ合う、欠点や失言などを言い立てる", "dummies": ["非難", "論難", "批判", "酷評"]}, {"id": 141, "word": "論破", "yomi": "ろんぱ", "mean": "議論で相手を打ち負かすこと", "dummies": ["撃破", "言い負かす", "屈服", "説破"]}, {"id": 142, "word": "諫言", "yomi": "かんげん", "mean": "目上の者をいさめること", "dummies": ["忠言", "苦言", "進言", "忠告"]}, {"id": 143, "word": "謬見", "yomi": "びゅうけん", "mean": "間違った考えや見解", "dummies": ["誤解", "誤見", "錯覚", "偏見"]}, {"id": 144, "word": "超然", "yomi": "ちょうぜん", "mean": "俗事にこだわらず、平然としているさま", "dummies": ["悠然", "泰然", "達観", "孤高"]}, {"id": 145, "word": "趨向", "yomi": "すうこう", "mean": "物事が向かう方向や傾向", "dummies": ["傾向", "動向", "趨勢", "流れ"]}, {"id": 146, "word": "躍如", "yomi": "やくじょ", "mean": "生き生きと現れているさま", "dummies": ["生き生き", "如実", "明白", "ありありと"]}, {"id": 147, "word": "述懐", "yomi": "じゅっかい", "mean": "心情や思い出を述べること", "dummies": ["吐露", "回想", "告白", "追憶"]}, {"id": 148, "word": "逆説", "yomi": "ぎゃくせつ", "mean": "一見すると矛盾しているように見えるが、実は真理を含む表現", "dummies": ["パラドックス", "矛盾", "詭弁", "背理"]}, {"id": 149, "word": "透徹", "yomi": "とうてつ", "mean": "澄んで濁りのないこと", "dummies": ["明晰", "明白", "クリア", "透明"]}, {"id": 150, "word": "逐次", "yomi": "ちくじ", "mean": "順を追って次々に", "dummies": ["順次", "次第に", "順番に", "順繰り"]}, {"id": 151, "word": "逓減", "yomi": "ていげん", "mean": "次第に減ること", "dummies": ["減少", "漸減", "縮小", "減退"]}, {"id": 152, "word": "遁走", "yomi": "とんそう", "mean": "逃げること", "dummies": ["逃亡", "逃走", "退却", "脱走"]}, {"id": 153, "word": "過分", "yomi": "かぶん", "mean": "程度や限度を超えた様", "dummies": ["過大", "不相応", "過度", "身に余る"]}, {"id": 154, "word": "遜色", "yomi": "そんしょく", "mean": "見劣り。", "dummies": ["見劣り", "劣等", "不足", "劣位"]}, {"id": 155, "word": "遺憾", "yomi": "いかん", "mean": "期待通りにいかず、心残りであること", "dummies": ["残念", "無念", "痛恨", "心残り"]}, {"id": 156, "word": "邂逅", "yomi": "かいこう", "mean": "思いがけなく会うこと。巡り会う", "dummies": ["遭遇", "再会", "巡り合い", "奇遇"]}, {"id": 157, "word": "醍醐味", "yomi": "だいごみ", "mean": "本当の素晴らしさや深い味わい", "dummies": ["妙味", "魅力", "興趣", "味わい"]}, {"id": 158, "word": "醒覚", "yomi": "せいかく", "mean": "目を覚ますこと。はっきりと自覚すること", "dummies": ["覚醒", "自覚", "認識", "感づく"]}, {"id": 159, "word": "金言", "yomi": "きんげん", "mean": "模範となるような優れた格言", "dummies": ["名言", "格言", "箴言", "至言"]}, {"id": 160, "word": "銘記", "yomi": "めいき", "mean": "しっかり心に刻み込み忘れないこと。", "dummies": ["記憶", "刻印", "肝に銘じる", "忘れない"]}, {"id": 161, "word": "躍如", "yomi": "やくじょ", "mean": "生き生きと現れているさま。", "dummies": ["生き生き", "如実", "明白", "ありありと"]}, {"id": 162, "word": "閨秀", "yomi": "けいしゅう", "mean": "学問や芸術などに優れた女性。", "dummies": ["才媛", "才女", "淑女", "インテリ"]}, {"id": 163, "word": "闊達", "yomi": "かったつ", "mean": "度量が広く小事にこだわらない、心のまま行動する", "dummies": ["磊落", "豪放", "豁達", "大らか"]}, {"id": 164, "word": "陶冶", "yomi": "とうや", "mean": "性質や能力を円満に鍛え育てること。", "dummies": ["修養", "薫陶", "育成", "鍛練"]}, {"id": 165, "word": "雄飛", "yomi": "ゆうひ", "mean": "勇ましく盛んに活動すること", "dummies": ["飛躍", "活躍", "躍進", "進出"]}, {"id": 166, "word": "難渋", "yomi": "なんじゅう", "mean": "困難にぶつかり、苦しむこと", "dummies": ["苦難", "難航", "困窮", "苦境"]}, {"id": 167, "word": "鳥瞰", "yomi": "ちょうかん", "mean": "高い所から広い範囲を見下ろし眺めること、全体を一望すること", "dummies": ["俯瞰", "一望", "大観", "展望"]}, {"id": 168, "word": "黙殺", "yomi": "もくさつ", "mean": "無視して相手にしないこと", "dummies": ["無視", "放置", "却下", "黙認"]}, {"id": 169, "word": "鼓吹", "yomi": "こすい", "mean": "意見を吹き込むこと", "dummies": ["扇動", "啓発", "鼓舞", "煽動"]}, {"id": 170, "word": "僭越", "yomi": "せんえつ", "mean": "出過ぎたことをすること", "dummies": ["越権", "不遜", "傲慢", "差し出がましい"]}, {"id": 171, "word": "奸智", "yomi": "かんち", "mean": "ずる賢い知恵", "dummies": ["悪知恵", "狡猾", "悪巧み", "悪策"]}, {"id": 172, "word": "慟哭", "yomi": "どうこく", "mean": "声をあげて激しく泣くこと", "dummies": ["号泣", "痛哭", "嗚咽", "悲嘆"]}, {"id": 173, "word": "桎梏", "yomi": "しっこく", "mean": "自由を束縛するもの", "dummies": ["束縛", "拘束", "足かせ", "重荷"]}, {"id": 174, "word": "狡猾", "yomi": "こうかつ", "mean": "悪賢いこと", "dummies": ["陰険", "卑劣", "悪賢い", "ずるい"]}, {"id": 175, "word": "狼藉", "yomi": "ろうぜき", "mean": "乱暴な振る舞い", "dummies": ["暴行", "暴挙", "乱行", "蛮行"]}, {"id": 176, "word": "畢竟", "yomi": "ひっきょう", "mean": "結局", "dummies": ["所詮", "結局", "帰する所", "結末"]}, {"id": 177, "word": "粛然", "yomi": "しゅくぜん", "mean": "厳粛で静かなさま", "dummies": ["厳粛", "荘厳", "静寂", "静謐"]}, {"id": 178, "word": "老練", "yomi": "ろうれん", "mean": "多く経験を積んで物事に慣れ、巧みであること", "dummies": ["熟練", "巧者", "ベテラン", "達人"]}, {"id": 179, "word": "詭弁", "yomi": "きべん", "mean": "道理に合わないごまかしの弁論", "dummies": ["屁理屈", "強弁", "こじつけ", "誤謬"]}, {"id": 180, "word": "跳梁", "yomi": "ちょうりょう", "mean": "跳ね回ること。好ましくないものがのさばってはびこること", "dummies": ["跋扈", "暗躍", "横行", "蔓延"]}, {"id": 181, "word": "軋轢", "yomi": "あつれき", "mean": "仲が悪くなる、葛藤が生じること", "dummies": ["摩擦", "衝突", "不和", "対立"]}, {"id": 182, "word": "釈然", "yomi": "しゃくぜん", "mean": "恨みなどが消え心が晴れ晴れする", "dummies": ["納得", "氷解", "すっきり", "晴れ晴れ"]}, {"id": 183, "word": "閨秀", "yomi": "けいしゅう", "mean": "学問や芸術などに優れた女性", "dummies": ["才媛", "才女", "淑女", "インテリ"]}, {"id": 184, "word": "頌詞", "yomi": "しょうし", "mean": "功績を称える言葉", "dummies": ["賛辞", "祝辞", "称賛", "表彰"]}, {"id": 185, "word": "顧慮", "yomi": "こりょ", "mean": "考慮に入れて心遣いをすること", "dummies": ["配慮", "考慮", "懸念", "気遣い"]}, {"id": 186, "word": "極致", "yomi": "きょくち", "mean": "達することのできる最高な状態", "dummies": ["到達", "絶頂", "最高潮", "頂点"]}, {"id": 187, "word": "恭順", "yomi": "きょうじゅん", "mean": "命令に謹んで従うこと", "dummies": ["服従", "帰順", "従順", "謹慎"]}, {"id": 188, "word": "悉皆", "yomi": "しっかい", "mean": "残らずすべて", "dummies": ["全部", "一切", "軒並み", "総じて"]}, {"id": 189, "word": "強欲", "yomi": "ごうよく", "mean": "あくどいほど欲が張っていること。", "dummies": ["貪欲", "我欲", "欲深", "慳貪"]}, {"id": 190, "word": "帰従", "yomi": "きじゅう", "mean": "反逆心を改めて、服従する", "dummies": ["帰順", "服従", "降伏", "心服"]}, {"id": 191, "word": "確執", "yomi": "かくしつ", "mean": "互いに意見を譲らない争い", "dummies": ["不和", "摩擦", "対立", "軋轢"]}, {"id": 192, "word": "懐柔", "yomi": "かいじゅう", "mean": "うまく手なずけること", "dummies": ["籠絡", "説得", "宥和", "妥協"]}, {"id": 193, "word": "一瞥", "yomi": "いちべつ", "mean": "ちらりとみること", "dummies": ["目撃", "注視", "一見", "凝視"]}, {"id": 194, "word": "一気呵成", "yomi": "いっきかせい", "mean": "物事を、一気になしとげること", "dummies": ["一挙両得", "電光石火", "速戦即決", "一朝一夕"]}, {"id": 195, "word": "やにわに", "yomi": "やにわに", "mean": "突然、いきなり", "dummies": ["突然", "俄かに", "不意に", "咄嗟に"]}, {"id": 196, "word": "ほぞをかむ", "yomi": "ほぞをかむ", "mean": "後悔やくやしさ", "dummies": ["悔恨", "後悔", "切歯扼腕", "痛恨"]}, {"id": 197, "word": "そねむ", "yomi": "そねむ", "mean": "自分より優れている相手を妬ましく思う", "dummies": ["嫉妬", "羨望", "憎悪", "恨む"]}, {"id": 198, "word": "せんない", "yomi": "せんない", "mean": "やりがいがない、詮無い", "dummies": ["無駄", "無益", "徒労", "甲斐ない"]}, {"id": 199, "word": "すげない", "yomi": "すげない", "mean": "思いやりがない、素気ない", "dummies": ["素っ気ない", "冷淡", "無愛想", "つれない"]}, {"id": 200, "word": "かまける", "yomi": "かまける", "mean": "一つのことに心をとられて、他が疎かになる", "dummies": ["拘泥", "執着", "専心", "没頭"]}, {"id": 201, "word": "かしずく", "yomi": "かしずく", "mean": "人に仕えて、お世話する", "dummies": ["奉仕", "服従", "従属", "世話"]}, {"id": 202, "word": "かかりきる", "yomi": "かかりきる", "mean": "一つのことに全力を注ぐ", "dummies": ["専心", "没頭", "熱中", "集中"]}, {"id": 203, "word": "おもはゆい", "yomi": "おもはゆい", "mean": "照れくさい、面映ゆい", "dummies": ["恥ずかしい", "気恥ずかしい", "照れくさい", "面目ない"]}, {"id": 204, "word": "あくどい", "yomi": "あくどい", "mean": "度を越えてたちが悪い", "dummies": ["悪辣", "陰険", "狡猾", "巧妙"]}, {"id": 205, "word": "疎漏", "yomi": "そろう", "mean": "おおざっぱで手落ちがあること", "dummies": ["杜撰", "粗雑", "怠慢", "遺漏"]}, {"id": 206, "word": "席巻", "yomi": "せっけん", "mean": "激しい勢いで自分の勢力範囲を広げる", "dummies": ["圧倒", "制覇", "蹂躙", "侵略"]}, {"id": 207, "word": "数奇", "yomi": "すうき", "mean": "運命の巡り合わせが悪く波乱に満ちている", "dummies": ["波乱", "不遇", "薄幸", "数奇"]}, {"id": 208, "word": "崇高", "yomi": "すうこう", "mean": "気高く尊いさま", "dummies": ["偉大", "尊厳", "高邁", "高貴"]}, {"id": 209, "word": "随時", "yomi": "ずいじ", "mean": "好きな時いつでも", "dummies": ["任意", "適宜", "常時", "都度"]}, {"id": 210, "word": "嘱望", "yomi": "しょくぼう", "mean": "前途や将来に望みをかけること", "dummies": ["期待", "待望", "熱望", "渇望"]}, {"id": 211, "word": "上梓", "yomi": "じょうし", "mean": "書類（本など）を出版すること", "dummies": ["出版", "刊行", "発刊", "執筆"]}, {"id": 212, "word": "承服", "yomi": "しょうふく", "mean": "納得したうえで従う", "dummies": ["納得", "同意", "受諾", "承知"]}, {"id": 213, "word": "手をこまねく", "yomi": "てをこまねく", "mean": "何もせず傍観すること", "dummies": ["傍観", "静観", "座視", "放置"]}, {"id": 214, "word": "歯に衣を着せない", "yomi": "はにきぬをきせない", "mean": "相手の感情や思惑を気にせず思ったまま言う", "dummies": ["率直", "露骨", "赤裸々", "明け透け"]}, {"id": 215, "word": "仔細", "yomi": "しさい", "mean": "細かいこと", "dummies": ["詳細", "委細", "事情", "顛末"]}, {"id": 216, "word": "惨慄", "yomi": "さんりつ", "mean": "おそろしさにぞっとする", "dummies": ["戦慄", "恐怖", "驚愕", "畏怖"]}, {"id": 217, "word": "際やか", "yomi": "きわやか", "mean": "くっきり際立つこと", "dummies": ["鮮明", "明瞭", "顕著", "歴然"]}, {"id": 218, "word": "座視", "yomi": "ざし", "mean": "黙ってみているだけ", "dummies": ["傍観", "静観", "黙認", "放置"]}, {"id": 219, "word": "屈服", "yomi": "くっぷく", "mean": "勢いに恐れ縮み、または負けて、従うこと。", "dummies": ["降伏", "服従", "隷属", "敗北"]}, {"id": 220, "word": "愚弄", "yomi": "ぐろう", "mean": "相手を蔑むこと", "dummies": ["嘲笑", "侮蔑", "冷笑", "揶揄"]}, {"id": 221, "word": "逼迫", "yomi": "ひっぱく", "mean": "行き詰って余裕がなくなること", "dummies": ["切迫", "窮乏", "困窮", "緊迫"]}, {"id": 222, "word": "比較的", "yomi": "ひかくてき", "mean": "圧倒的の反対（※元の画像の通り記載）", "dummies": ["絶対的", "対照的", "相対的", "部分的"]}, {"id": 223, "word": "披瀝", "yomi": "ひれき", "mean": "心の中を包み隠さず、打ち明ける", "dummies": ["吐露", "開陳", "表明", "告白"]}, {"id": 224, "word": "卑下", "yomi": "ひげ", "mean": "自分をあえて低い位置に引き下げてへりくだること。", "dummies": ["謙遜", "遜り", "自嘲", "卑屈"]}, {"id": 225, "word": "反正", "yomi": "はんせい", "mean": "正しい状態に返すこと", "dummies": ["正常化", "回復", "是正", "復旧"]}, {"id": 226, "word": "抜き差しならない", "yomi": "ぬきさしならない", "mean": "動きが取れない", "dummies": ["絶体絶命", "窮地", "進退維谷", "八方塞がり"]}, {"id": 227, "word": "馬耳東風", "yomi": "ばじとうふう", "mean": "他人の意見や批評に注意を払わず聞き流すこと", "dummies": ["無頓着", "蛙の面に水", "暖簾に腕押し", "聞き流す"]}, {"id": 228, "word": "能弁", "yomi": "のうべん", "mean": "上手に話すこと", "dummies": ["達者", "雄弁", "多弁", "饒舌"]}, {"id": 229, "word": "年鑑", "yomi": "ねんかん", "mean": "ある分野の1年間の出来事", "dummies": ["年報", "白書", "記録", "統計"]}, {"id": 230, "word": "忍従", "yomi": "にんじゅう", "mean": "耐え忍んで、言われるがままに従う", "dummies": ["屈従", "甘受", "服従", "忍耐"]}, {"id": 231, "word": "頭を垂れる", "yomi": "あたまをたれる", "mean": "へりくだって謙虚になる", "dummies": ["屈服", "謙遜", "平身低頭", "敬礼"]}, {"id": 232, "word": "徒食", "yomi": "としょく", "mean": "働かないで遊び暮らすこと", "dummies": ["無為徒食", "遊惰", "怠惰", "居候"]}, {"id": 233, "word": "通暁", "yomi": "つうぎょう", "mean": "よく知っている", "dummies": ["精通", "熟知", "暁通", "造詣"]}, {"id": 234, "word": "耽溺", "yomi": "たんでき", "mean": "何かに夢中になっておぼれること", "dummies": ["熱中", "没頭", "依存", "溺惑"]}, {"id": 235, "word": "打診", "yomi": "だしん", "mean": "相手の意向を確かめるために様子を見る", "dummies": ["探り", "意向確認", "事前交渉", "推察"]}, {"id": 236, "word": "打算", "yomi": "ださん", "mean": "利害や損得を見積もること", "dummies": ["利己的", "損得勘定", "計略", "計算"]}, {"id": 237, "word": "多弁", "yomi": "たべん", "mean": "口数が多い", "dummies": ["饒舌", "雄弁", "おしゃべり", "能弁"]}, {"id": 238, "word": "俗物・俗人", "yomi": "ぞくぶつ・ぞくじん", "mean": "世間的な名誉や利益ばかり追う人", "dummies": ["凡人", "凡夫", "小人", "俗衆"]}, {"id": 239, "word": "早世", "yomi": "そうせい", "mean": "早く死ぬこと", "dummies": ["夭折", "早逝", "急逝", "若死に"]}, {"id": 240, "word": "箴言", "yomi": "しんげん", "mean": "戒めの言葉、教訓", "dummies": ["格言", "名言", "金言", "教訓"]}, {"id": 241, "word": "昵懇", "yomi": "じっこん", "mean": "間柄が親しいこと", "dummies": ["親密", "懇意", "懇昵", "親交"]}, {"id": 242, "word": "揶揄", "yomi": "やゆ", "mean": "からかう", "dummies": ["嘲笑", "からかい", "愚弄", "冷笑"]}, {"id": 243, "word": "已然", "yomi": "いぜん", "mean": "すでに起こっていること", "dummies": ["既定", "既成", "必然", "過去"]}, {"id": 244, "word": "僥倖", "yomi": "ぎょうこう", "mean": "思いがけない幸運", "dummies": ["幸運", "奇跡", "フロック", "棚ぼた"]}, {"id": 245, "word": "廉価", "yomi": "れんか", "mean": "やすい", "dummies": ["安価", "格安", "低価格", "特価"]}, {"id": 246, "word": "領袖", "yomi": "りょうしゅう", "mean": "集団におけるリーダー", "dummies": ["首領", "頭目", "巨魁", "盟主"]}, {"id": 247, "word": "落成", "yomi": "らくせい", "mean": "建築物が出来上がる", "dummies": ["竣工", "完成", "完工", "完成"]}, {"id": 248, "word": "来歴", "yomi": "らいれき", "mean": "物事のこれまでの次第", "dummies": ["由来", "経歴", "履歴", "沿革"]}, {"id": 249, "word": "悠然", "yomi": "ゆうぜん", "mean": "落ち着いていて、少しもあわてないさま", "dummies": ["泰然", "落ち着き", "平然", "従容"]}, {"id": 250, "word": "慢心", "yomi": "まんしん", "mean": "自慢していい気分になること、おごり高ぶること", "dummies": ["驕り", "自負", "過信", "傲慢"]}, {"id": 251, "word": "奔放", "yomi": "ほんぽう", "mean": "常識や慣習にとらわれず思うままにふるまうこと", "dummies": ["自由", "気まま", "無軌道", "放縦"]}, {"id": 252, "word": "放漫", "yomi": "ほうまん", "mean": "しまりがなくいい加減", "dummies": ["ルーズ", "杜撰", "怠慢", "野放図"]}, {"id": 253, "word": "弁駁", "yomi": "べんばく", "mean": "他人の説の誤りを攻撃して言い破る", "dummies": ["反論", "論破", "反証", "抗弁"]}, {"id": 254, "word": "服従", "yomi": "ふくじゅう", "mean": "命令をよく聞いて、素直に従うこと。", "dummies": ["従属", "隷属", "帰順", "恭順"]}];
+</script>
+<script>
+(function(){
+  "use strict";
+
+  // ---------- 永続ストレージ（要件④⑤） ----------
+  // window.storage が使える環境では永続化。無ければメモリのみ（セッション内）。
+  const HAS_STORE = (typeof window !== "undefined" && window.storage && typeof window.storage.get === "function");
+  const KEY = "spi_kotoba_state_v1";
+  let state = { history:{}, starred:{} }; // history: id -> [{t,correct}], starred: id -> true
+  let saveTimer = null;
+
+  async function loadState(){
+    if(!HAS_STORE) return;
+    try{
+      const r = await window.storage.get(KEY, false);
+      if(r && r.value){
+        const p = JSON.parse(r.value);
+        if(p && typeof p === "object"){
+          state.history = p.history || {};
+          state.starred = p.starred || {};
+        }
+      }
+    }catch(e){ /* 初回はキー無しで例外 → 無視 */ }
+  }
+  function saveState(){
+    if(!HAS_STORE) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async ()=>{
+      try{ await window.storage.set(KEY, JSON.stringify(state), false); }
+      catch(e){ console.error("save failed", e); }
+    }, 250);
+  }
+
+  // ---------- データ ----------
+  const DATA = (typeof QUIZ_DATA !== "undefined") ? QUIZ_DATA : [];
+  const byId = {};
+  DATA.forEach(d=>byId[d.id]=d);
+  const ALL_WORDS = DATA.map(d=>d.word);
+
+  // ---------- ユーティリティ ----------
+  function shuffle(a){
+    a=a.slice();
+    for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+    return a;
+  }
+  function hist(id){ return state.history[id] || []; }
+  function lastWrong(id){ const h=hist(id); for(let i=h.length-1;i>=0;i--){ return !h[i].correct; } return false; }
+  function isWrongSet(id){ // 「間違えた問題」= 直近の解答が不正解
+    const h=hist(id); if(!h.length) return false; return !h[h.length-1].correct;
+  }
+  function everWrong(id){ return hist(id).some(x=>!x.correct); }
+  function isStar(id){ return !!state.starred[id]; }
+  function attempted(id){ return hist(id).length>0; }
+
+  function buildOptions(item){
+    // 正解1 + ダミー4。ダミーが正解と重複/不足の場合は他単語で補完。
+    let opts = [item.word];
+    const used = new Set([item.word]);
+    (item.dummies||[]).forEach(d=>{
+      if(opts.length<5 && !used.has(d)){ opts.push(d); used.add(d); }
+    });
+    if(opts.length<5){
+      const pool = shuffle(ALL_WORDS);
+      for(const w of pool){
+        if(opts.length>=5) break;
+        if(!used.has(w)){ opts.push(w); used.add(w); }
+      }
+    }
+    return shuffle(opts);
+  }
+
+  // ---------- セッション状態 ----------
+  let tab = "quiz";           // quiz | wrong | star | history
+  let queue = [];             // 出題する id の配列（シャッフル済）
+  let qIndex = 0;             // queue 内位置
+  let answered = false;
+  let currentOpts = [];
+  let sessionMode = "all";    // all | wrong : どの母集合で出題中か
+  let sessionStats = {correct:0, total:0};
+
+  function startSession(mode){
+    sessionMode = mode;
+    let ids;
+    if(mode==="wrong"){
+      ids = DATA.filter(d=>isWrongSet(d.id)).map(d=>d.id);
+    }else{
+      ids = DATA.map(d=>d.id);
+    }
+    queue = shuffle(ids);     // 要件③ 毎回シャッフル
+    qIndex = 0;
+    answered = false;
+    sessionStats = {correct:0, total:0};
+    tab = "quiz";
+    render();
+  }
+
+  // ---------- レンダリング ----------
+  const view = document.getElementById("view");
+  const tabsEl = document.getElementById("tabs");
+  document.getElementById("totalLbl").textContent = " 全"+DATA.length+"問";
+
+  function renderTabs(){
+    const wrongCount = DATA.filter(d=>isWrongSet(d.id)).length;
+    const starCount = Object.keys(state.starred).filter(k=>state.starred[k]).length;
+    const defs = [
+      {id:"quiz",  label:"出題", cnt:null},
+      {id:"wrong", label:"間違えた問題", cnt:wrongCount},
+      {id:"star",  label:"学びたいリスト", cnt:starCount},
+      {id:"history", label:"履歴", cnt:null},
+    ];
+    tabsEl.innerHTML = "";
+    defs.forEach(d=>{
+      const b=document.createElement("button");
+      b.className="tab"+(tab===d.id?" active":"");
+      b.innerHTML = d.label + (d.cnt!==null? ' <span class="cnt">'+d.cnt+'</span>':"");
+      b.onclick=()=>{ tab=d.id; if(tab==="quiz" && queue.length===0) startSession("all"); else render(); };
+      tabsEl.appendChild(b);
+    });
+  }
+
+  function render(){
+    renderTabs();
+    if(tab==="quiz") return renderQuiz();
+    if(tab==="wrong") return renderWrong();
+    if(tab==="star") return renderStar();
+    if(tab==="history") return renderHistory();
+  }
+
+  // ===== 出題画面 =====
+  function renderQuiz(){
+    if(queue.length===0){ startSession("all"); return; }
+    if(qIndex>=queue.length) return renderDone();
+
+    const id = queue[qIndex];
+    const item = byId[id];
+    if(!answered) currentOpts = buildOptions(item);
+
+    const h = hist(id);
+    const oCnt = h.filter(x=>x.correct).length;
+    const xCnt = h.length - oCnt;
+    const pct = Math.round((qIndex)/queue.length*100);
+
+    let html = "";
+    html += '<div class="progress"><i style="width:'+pct+'%"></i></div>';
+    html += '<div class="card">';
+    html += '<div class="meta"><span>'+(sessionMode==="wrong"?'間違えた問題のみ':'全問')+' &middot; '+(qIndex+1)+' / '+queue.length+'</span>';
+    html += '<span>これまで ◯'+oCnt+' / ✕'+xCnt+'</span></div>';
+    html += '<div class="label">問題</div>';
+    html += '<div class="meta" style="margin-bottom:6px"><span>下線部の意味に合致する語を1つ選びなさい</span>';
+    html += '<button class="star '+(isStar(id)?"on":"")+'" title="学びたいリストに追加/解除" data-star="'+id+'">★</button></div>';
+    html += '<div class="qtext">'+esc(item.mean)+'</div>';
+    html += '<div style="margin-top:16px">';
+    const keys=["A","B","C","D","E"];
+    currentOpts.forEach((opt,i)=>{
+      let cls="opt";
+      if(answered){
+        cls+=" disabled";
+        if(opt===item.word) cls+=" correct";
+        else if(opt===window.__picked) cls+=" wrong";
+        else cls+=" dim";
+      }
+      html+='<div class="'+cls+'" data-opt="'+esc(opt)+'"><span class="key">'+keys[i]+'</span><span>'+esc(opt)+'</span></div>';
+    });
+    html += '</div>';
+
+    if(answered){
+      const ok = window.__picked===item.word;
+      html += '<div class="feedback '+(ok?"ok":"ng")+'">';
+      if(ok) html += '正解！ ';
+      else html += '不正解。 ';
+      html += '正解は <span class="ans">'+esc(item.word)+'</span>';
+      if(item.yomi) html += '<span class="yomi">（'+esc(item.yomi)+'）</span>';
+      html += '</div>';
+      html += '<div class="row">';
+      html += '<button class="btn btn-primary" id="nextBtn">'+(qIndex+1>=queue.length?'結果を見る':'次の問題')+' →</button>';
+      html += '</div>';
+      html += '<div style="text-align:center;margin-top:10px"><span class="mini">'+(isStar(id)?'★ 学びたいリストに登録済み':'★ボタンでこの問題を学びたいリストに追加できます')+'</span></div>';
+    }
+    html += '</div>';
+    view.innerHTML = html;
+
+    // バインド
+    view.querySelectorAll("[data-star]").forEach(b=>{
+      b.onclick=(e)=>{ e.stopPropagation(); toggleStar(+b.dataset.star); renderQuiz(); renderTabs(); };
+    });
+    if(!answered){
+      view.querySelectorAll("[data-opt]").forEach(o=>{
+        o.onclick=()=>answer(id, o.dataset.opt);
+      });
+    }else{
+      const nb=document.getElementById("nextBtn");
+      if(nb) nb.onclick=()=>{ qIndex++; answered=false; window.__picked=null; renderQuiz(); };
+    }
+  }
+
+  function answer(id, picked){
+    if(answered) return;
+    answered=true;
+    window.__picked=picked;
+    const item=byId[id];
+    const correct = picked===item.word;
+    // 要件⑤ 履歴を残す
+    if(!state.history[id]) state.history[id]=[];
+    state.history[id].push({t:Date.now(), correct:correct});
+    sessionStats.total++; if(correct) sessionStats.correct++;
+    saveState();
+    if(correct) toast("正解！");
+    else toast("不正解 → 正解: "+item.word);
+    renderQuiz();
+    renderTabs();
+  }
+
+  function renderDone(){
+    const s=sessionStats;
+    const acc = s.total? Math.round(s.correct/s.total*100):0;
+    let html='<div class="card done-card">';
+    html+='<div class="big">'+(acc>=80?'🎉':acc>=50?'👍':'💪')+'</div>';
+    html+='<h2 style="margin:4px 0">セッション終了</h2>';
+    html+='<p class="mini">'+(sessionMode==="wrong"?'間違えた問題のみ':'全'+queue.length+'問')+'</p>';
+    html+='<div class="stat-grid" style="margin-top:16px">';
+    html+='<div class="stat"><div class="n">'+s.total+'</div><div class="t">解答数</div></div>';
+    html+='<div class="stat"><div class="n" style="color:var(--green)">'+s.correct+'</div><div class="t">正解</div></div>';
+    html+='<div class="stat"><div class="n" style="color:var(--blue)">'+acc+'%</div><div class="t">正答率</div></div>';
+    html+='</div>';
+    html+='<div class="row"><button class="btn btn-primary" id="again">もう一度（全問シャッフル）</button></div>';
+    const wc=DATA.filter(d=>isWrongSet(d.id)).length;
+    if(wc>0) html+='<div class="row"><button class="btn btn-ghost" id="againWrong">間違えた'+wc+'問だけ解く</button></div>';
+    html+='</div>';
+    view.innerHTML=html;
+    document.getElementById("again").onclick=()=>startSession("all");
+    const aw=document.getElementById("againWrong");
+    if(aw) aw.onclick=()=>startSession("wrong");
+  }
+
+  // ===== 間違えた問題一覧（要件①②） =====
+  function renderWrong(){
+    const items = DATA.filter(d=>isWrongSet(d.id));
+    let html="";
+    html+='<div class="card">';
+    html+='<div class="label">間違えた問題</div>';
+    if(items.length===0){
+      html+='<div class="empty"><div class="big">✓</div>直近で間違えた問題はありません。<br>全問解いて間違えると、ここに溜まります。</div>';
+      html+='</div>';
+      view.innerHTML=html; return;
+    }
+    html+='<div class="toolbar"><span class="mini">直近の解答が不正解の問題：'+items.length+'件</span><span class="spacer"></span>';
+    html+='<button class="btn btn-primary" style="width:auto;padding:10px 16px" id="solveWrong">この'+items.length+'問だけ解く →</button></div>';
+    items.forEach(d=>{ html+=listItemHTML(d, true); });
+    html+='</div>';
+    view.innerHTML=html;
+    document.getElementById("solveWrong").onclick=()=>startSession("wrong");
+    bindList();
+  }
+
+  // ===== 学びたいリスト（要件④） =====
+  function renderStar(){
+    const items = DATA.filter(d=>isStar(d.id));
+    let html="";
+    html+='<div class="card">';
+    html+='<div class="label">学びたいリスト ★</div>';
+    if(items.length===0){
+      html+='<div class="empty"><div class="big">★</div>まだ登録がありません。<br>出題画面や各リストの★ボタンで、正解した問題でも追加できます。</div>';
+      html+='</div>';
+      view.innerHTML=html; return;
+    }
+    html+='<div class="toolbar"><span class="mini">登録：'+items.length+'件</span><span class="spacer"></span>';
+    html+='<button class="btn btn-primary" style="width:auto;padding:10px 16px" id="solveStar">この'+items.length+'問を解く →</button></div>';
+    items.forEach(d=>{ html+=listItemHTML(d, true); });
+    html+='</div>';
+    view.innerHTML=html;
+    document.getElementById("solveStar").onclick=()=>{
+      queue=shuffle(items.map(d=>d.id)); qIndex=0; answered=false;
+      sessionMode="all"; sessionStats={correct:0,total:0}; tab="quiz"; render();
+    };
+    bindList();
+  }
+
+  // ===== 履歴（要件⑤） =====
+  function renderHistory(){
+    const attemptedItems = DATA.filter(d=>attempted(d.id));
+    let totA=0, totC=0;
+    attemptedItems.forEach(d=>{ const h=hist(d.id); totA+=h.length; totC+=h.filter(x=>x.correct).length; });
+    const acc = totA? Math.round(totC/totA*100):0;
+    let html="";
+    html+='<div class="stat-grid">';
+    html+='<div class="stat"><div class="n">'+attemptedItems.length+'</div><div class="t">挑戦した問題</div></div>';
+    html+='<div class="stat"><div class="n">'+totA+'</div><div class="t">のべ解答数</div></div>';
+    html+='<div class="stat"><div class="n" style="color:var(--blue)">'+acc+'%</div><div class="t">通算正答率</div></div>';
+    html+='</div>';
+    html+='<div class="card">';
+    html+='<div class="toolbar"><div class="label" style="margin-bottom:0">問題ごとの履歴</div><span class="spacer"></span>';
+    html+='<button class="link" id="resetAll">履歴をすべてリセット</button></div>';
+    if(attemptedItems.length===0){
+      html+='<div class="empty">まだ解答履歴がありません。</div>';
+    }else{
+      // 直近解答が新しい順
+      attemptedItems.sort((a,b)=>{
+        const ha=hist(a.id), hb=hist(b.id);
+        return hb[hb.length-1].t - ha[ha.length-1].t;
+      });
+      attemptedItems.forEach(d=>{ html+=listItemHTML(d, true, true); });
+    }
+    html+='</div>';
+    view.innerHTML=html;
+    document.getElementById("resetAll").onclick=()=>{
+      if(confirm("すべての解答履歴と学びたいリストを削除します。よろしいですか？")){
+        state={history:{},starred:{}}; saveState(); render();
+      }
+    };
+    bindList();
+  }
+
+  // 共通リスト項目
+  function listItemHTML(d, showStar, showAllHist){
+    const h=hist(d.id);
+    const o=h.filter(x=>x.correct).length, x=h.length-o;
+    let badge="";
+    if(h.length){
+      if(isWrongSet(d.id)) badge='<span class="badge ng">直近✕</span>';
+      else badge='<span class="badge ok">直近◯</span>';
+    }
+    let html='<div class="list-item">';
+    html+='<div class="li-main">';
+    html+='<div class="li-word">'+esc(d.word)+(d.yomi?'<span class="y">'+esc(d.yomi)+'</span>':'')+' '+badge+'</div>';
+    html+='<div class="li-mean">'+esc(d.mean)+'</div>';
+    if(h.length){
+      html+='<div class="li-hist">';
+      const show = h.slice(-12);
+      show.forEach(e=>{ html+='<span class="dot '+(e.correct?"o":"x")+'" title="'+(e.correct?"正解":"不正解")+'"></span>'; });
+      html+='<span class="mini" style="margin-left:6px">◯'+o+' / ✕'+x+'</span>';
+      html+='</div>';
+    }
+    html+='</div>';
+    if(showStar){
+      html+='<button class="star '+(isStar(d.id)?"on":"")+'" data-star="'+d.id+'" title="学びたいリスト">★</button>';
+    }
+    html+='</div>';
+    return html;
+  }
+  function bindList(){
+    view.querySelectorAll("[data-star]").forEach(b=>{
+      b.onclick=()=>{ toggleStar(+b.dataset.star); render(); };
+    });
+  }
+
+  function toggleStar(id){
+    if(state.starred[id]) delete state.starred[id];
+    else state.starred[id]=true;
+    saveState();
+  }
+
+  function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  let toastTimer=null;
+  function toast(msg){
+    const t=document.getElementById("toast");
+    t.textContent=msg; t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(()=>t.classList.remove("show"),1400);
+  }
+
+  // キーボード操作（A-E / Enter）
+  document.addEventListener("keydown",(e)=>{
+    if(tab!=="quiz") return;
+    if(!answered){
+      const k=e.key.toUpperCase();
+      const idx={"A":0,"B":1,"C":2,"D":3,"E":4,"1":0,"2":1,"3":2,"4":3,"5":4}[k];
+      if(idx!==undefined && currentOpts[idx]!==undefined){
+        const id=queue[qIndex]; answer(id, currentOpts[idx]);
+      }
+    }else{
+      if(e.key==="Enter" || e.key===" "){
+        e.preventDefault();
+        const nb=document.getElementById("nextBtn"); if(nb) nb.click();
+      }
+    }
+  });
+
+  // 起動
+  (async function init(){
+    await loadState();
+    startSession("all");
+  })();
+
+})();
+</script>
+</body>
+</html>
